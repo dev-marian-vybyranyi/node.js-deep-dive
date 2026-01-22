@@ -1,6 +1,21 @@
 const fs = require("fs/promises");
 
 (async () => {
+  const createFile = async (path) => {
+    try {
+      const existingFileHandle = await fs.open(path, "r");
+      existingFileHandle.close();
+
+      return console.log(`The file ${path} already exists.`);
+    } catch (e) {
+      const newFileHandle = await fs.open(path, "w");
+      console.log("A new file was successfully created.");
+      newFileHandle.close();
+    }
+  };
+
+  const CREATE_FILE = "create a file";
+
   const commandFileHandler = await fs.open("./command.txt", "r");
 
   commandFileHandler.on("change", async () => {
@@ -10,14 +25,14 @@ const fs = require("fs/promises");
     const length = buff.byteLength;
     const position = 0;
 
-    const content = await commandFileHandler.read(
-      buff,
-      offset,
-      length,
-      position,
-    );
+    await commandFileHandler.read(buff, offset, length, position);
 
-    console.log(content);
+    const command = buff.toString("utf-8");
+
+    if (command.includes(CREATE_FILE)) {
+      const filePath = command.substring(CREATE_FILE.length + 1);
+      createFile(filePath);
+    }
   });
 
   const watcher = fs.watch("./command.txt");
