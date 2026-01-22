@@ -1,6 +1,11 @@
 const fs = require("fs/promises");
 
 (async () => {
+  const CREATE_FILE = "create a file";
+  const DELETE_FILE = "delete the file";
+  const RENAME_FILE = "rename the file";
+  const ADD_TO_FILE = "add to the file";
+
   const createFile = async (path) => {
     try {
       const existingFileHandle = await fs.open(path, "r");
@@ -14,7 +19,50 @@ const fs = require("fs/promises");
     }
   };
 
-  const CREATE_FILE = "create a file";
+  const deleteFile = async (path) => {
+    try {
+      await fs.unlink(path);
+      console.log("The file was successfully removed.");
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        console.log("No file at this path to remove.");
+      } else {
+        console.log("An error occurred while removing the file: ");
+        console.log(e);
+      }
+    }
+  };
+
+  const renameFile = async (oldPath, newPath) => {
+    try {
+      await fs.rename(oldPath, newPath);
+      console.log("The file was successfully renamed.");
+    } catch (e) {
+      if (e.code === "ENOENT") {
+        console.log(
+          "No file at this path to rename, or the destination doesn't exist.",
+        );
+      } else {
+        console.log("An error occurred while removing the file: ");
+        console.log(e);
+      }
+    }
+  };
+
+  let addedContent;
+
+  const addToFile = async (path, content) => {
+    if (addedContent === content) return;
+    try {
+      const fileHandle = await fs.open(path, "a");
+      fileHandle.write(content);
+      addedContent = content;
+      console.log("The content was added successfully.");
+    } catch (e) {
+      console.log("An error occurred while removing the file: ");
+      console.log(e);
+    }
+  };
 
   const commandFileHandler = await fs.open("./command.txt", "r");
 
@@ -29,9 +77,34 @@ const fs = require("fs/promises");
 
     const command = buff.toString("utf-8");
 
+    // create a file:
     if (command.includes(CREATE_FILE)) {
       const filePath = command.substring(CREATE_FILE.length + 1);
       createFile(filePath);
+    }
+
+    // delete a file
+    if (command.includes(DELETE_FILE)) {
+      const filePath = command.substring(DELETE_FILE.length + 1);
+      deleteFile(filePath);
+    }
+
+    // rename file:
+    if (command.includes(RENAME_FILE)) {
+      const _idx = command.indexOf(" to ");
+      const oldFilePath = command.substring(RENAME_FILE.length + 1, _idx);
+      const newFilePath = command.substring(_idx + 4);
+
+      renameFile(oldFilePath, newFilePath);
+    }
+
+    // add to file:
+    if (command.includes(ADD_TO_FILE)) {
+      const _idx = command.indexOf(" this content: ");
+      const filePath = command.substring(ADD_TO_FILE.length + 1, _idx);
+      const content = command.substring(_idx + 15);
+
+      addToFile(filePath, content);
     }
   });
 
