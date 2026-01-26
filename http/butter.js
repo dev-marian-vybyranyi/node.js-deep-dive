@@ -5,6 +5,7 @@ class Butter {
   constructor() {
     this.server = http.createServer();
     this.routes = {};
+    this.middleware = [];
 
     this.server.on("request", (req, res) => {
       res.sendFile = async (path, mime) => {
@@ -26,18 +27,32 @@ class Butter {
         res.end(JSON.stringify(data));
       };
 
-      if (!this.routes[req.method.toLocaleLowerCase() + req.url]) {
-        return res
-          .status(404)
-          .json({ error: `Cannot ${req.method} ${req.url}` });
-      }
+      const runMiddleware = (req, res, middleware, index) => {
+        if (index === middleware.length) {
+          if (!this.routes[req.method.toLocaleLowerCase() + req.url]) {
+            return res
+              .status(404)
+              .json({ error: `Cannot ${req.method} ${req.url}` });
+          }
 
-      this.routes[req.method.toLocaleLowerCase() + req.url](req, res);
+          this.routes[req.method.toLowerCase() + req.url](req, res);
+        } else {
+          middleware[index](req, res, () => {
+            runMiddleware(req, res, middleware, index + 1);
+          });
+        }
+      };
+
+      runMiddleware(req, res, this.middleware, 0);
     });
   }
 
   route(method, path, cb) {
     this.routes[method + path] = cb;
+  }
+
+  beforeEach(cb) {
+    this.middleware.push(cb);
   }
 
   listen(port, cb) {
