@@ -4,7 +4,6 @@ const fs = require("node:fs/promises");
 class Butter {
   constructor() {
     this.server = http.createServer();
-
     this.routes = {};
 
     this.server.on("request", (req, res) => {
@@ -33,7 +32,7 @@ class Butter {
           .json({ error: `Cannot ${req.method} ${req.url}` });
       }
 
-      this.routes[req.method.toLowerCase() + req.url](req, res);
+      this.routes[req.method.toLocaleLowerCase() + req.url](req, res);
     });
   }
 
