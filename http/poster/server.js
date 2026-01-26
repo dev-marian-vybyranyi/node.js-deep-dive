@@ -72,16 +72,21 @@ server.route("post", "/api/login", (req, res) => {
   });
 });
 
+server.route("delete", "/api/logout", (req, res) => {});
+
 server.route("get", "/api/user", (req, res) => {
   const token = req.headers.cookie.split("=")[1];
 
   const session = SESSIONS.find((session) => session.token === token);
   if (session) {
-    console.log("Sending user info...");
+    const user = USERS.find((user) => user.id === session.userId);
+    res.json({ username: user.username, name: user.name });
   } else {
     res.status(401).json({ error: "Unauthorized" });
   }
 });
+
+server.route("put", "/api/user", (req, res) => {});
 
 server.route("get", "/api/posts", (req, res) => {
   const posts = POSTS.map((post) => {
@@ -92,6 +97,8 @@ server.route("get", "/api/posts", (req, res) => {
 
   res.status(200).json(posts);
 });
+
+server.route("post", "/api/posts", (req, res) => {});
 
 server.listen(PORT, () => {
   console.log(`Server has started on port ${PORT}`);
