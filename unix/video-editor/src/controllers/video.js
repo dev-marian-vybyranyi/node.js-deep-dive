@@ -5,6 +5,9 @@ const { pipeline } = require("node:stream/promises");
 const util = require("../../lib/util");
 const DB = require("../DB");
 const FF = require("../../lib/FF");
+const JobQueue = require("../../lib/JobQueue");
+
+const jobs = new JobQueue();
 
 // Return the list of all the videos that a logged in user has uploaded
 const getVideos = (req, res, handleErr) => {
@@ -111,24 +114,19 @@ const resizeVideo = async (req, res, handleErr) => {
   DB.update();
   const video = DB.videos.find((video) => video.videoId === videoId);
   video.resizes[`${width}x${height}`] = { processing: true };
+  DB.save();
 
-  const originalVideoPath = `./storage/${video.videoId}/original.${video.extension}`;
-  const targetVideoPath = `./storage/${video.videoId}/${width}x${height}.${video.extension}`;
+  jobs.enqueue({
+    type: "resize",
+    videoId,
+    width,
+    height,
+  });
 
-  try {
-    await FF.resize(originalVideoPath, targetVideoPath, width, height);
-
-    video.resizes[`${width}x${height}`].processing = false;
-    DB.save();
-
-    res.status(200).json({
-      status: "success",
-      message: "The video is now being processed!",
-    });
-  } catch (e) {
-    util.deleteFile(targetVideoPath);
-    return handleErr(e);
-  }
+  res.status(200).json({
+    status: "success",
+    message: "The video is now being processed!",
+  });
 };
 
 const getVideoAsset = async (req, res, handleErr) => {
@@ -178,25 +176,22 @@ const getVideoAsset = async (req, res, handleErr) => {
       break;
   }
 
-  try {
-    const stat = await file.stat();
+  const stat = await file.stat();
 
-    const fileStream = file.createReadStream();
+  const fileStream = file.createReadStream();
 
-    if (type !== "thumbnail") {
-      res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
-    }
-
-    res.setHeader("Content-Type", mimeType);
-    res.setHeader("Content-Length", stat.size);
-
-    res.status(200);
-
-    await pipeline(fileStream, res);
-    file.close();
-  } catch (e) {
-    console.log(e);
+  if (type !== "thumbnail") {
+    res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
   }
+
+  res.setHeader("Content-Type", mimeType);
+  res.setHeader("Content-Length", stat.size);
+
+  res.status(200);
+
+  await pipeline(fileStream, res);
+
+  file.close();
 };
 
 const controller = {
