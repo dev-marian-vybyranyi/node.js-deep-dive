@@ -99,8 +99,17 @@ const resize = (originalVideoPath, targetVideoPath, width, height) => {
       `scale=${width}x${height}`,
       "-c:a",
       "copy",
+      "-threads",
+      "2",
+      "-loglevel",
+      "error",
+      "-y",
       targetVideoPath,
     ]);
+
+    ffmpeg.stderr.on("data", (data) => {
+      console.log(data.toString("utf8"));
+    });
 
     ffmpeg.on("close", (code) => {
       if (code === 0) {
