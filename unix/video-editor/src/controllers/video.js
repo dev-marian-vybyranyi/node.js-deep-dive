@@ -71,10 +71,41 @@ const uploadVideo = async (req, res, handleErr) => {
   }
 };
 
-// Return a video asset to the client
+const extractAudio = async (req, res, handleErr) => {
+  const videoId = req.params.get("videoId");
+
+  DB.update();
+  const video = DB.videos.find((video) => video.videoId === videoId);
+
+  if (video.extractedAudio) {
+    return handleErr({
+      status: 400,
+      message: "The audio has already been extracted for this video.",
+    });
+  }
+
+  try {
+    const originalVideoPath = `./storage/${videoId}/original.${video.extension}`;
+    const targetAudioPath = `./storage/${videoId}/audio.aac`;
+
+    await FF.extractAudio(originalVideoPath, targetAudioPath);
+
+    video.extractedAudio = true;
+    DB.save();
+
+    res.status(200).json({
+      status: "success",
+      message: "The audio was extracted successfully!",
+    });
+  } catch (e) {
+    util.deleteFile(targetAudioPath);
+    return handleErr(e);
+  }
+};
+
 const getVideoAsset = async (req, res, handleErr) => {
   const videoId = req.params.get("videoId");
-  const type = req.params.get("type"); // thumbnail, original, audio, resize
+  const type = req.params.get("type");
 
   DB.update();
   const video = DB.videos.find((video) => video.videoId === videoId);
@@ -88,7 +119,7 @@ const getVideoAsset = async (req, res, handleErr) => {
 
   let file;
   let mimeType;
-  let filename; // the final file name for the download (including the extension)
+  let filename;
 
   switch (type) {
     case "thumbnail":
@@ -106,7 +137,7 @@ const getVideoAsset = async (req, res, handleErr) => {
         `./storage/${videoId}/${dimensions}.${video.extension}`,
         "r"
       );
-      mimeType = "video/mp4"; // Not a good practice! Videos are not always MP4
+      mimeType = "video/mp4";
       filename = `${video.name}-${dimensions}.${video.extension}`;
       break;
     case "original":
@@ -114,25 +145,21 @@ const getVideoAsset = async (req, res, handleErr) => {
         `./storage/${videoId}/original.${video.extension}`,
         "r"
       );
-      mimeType = "video/mp4"; // Not a good practice! Videos are not always MP4
+      mimeType = "video/mp4";
       filename = `${video.name}.${video.extension}`;
       break;
   }
 
   try {
-    // Grab the file size
     const stat = await file.stat();
 
     const fileStream = file.createReadStream();
 
     if (type !== "thumbnail") {
-      // Set a header to prompt for download
       res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
     }
 
-    // Set the Content-Type header based on the file type
     res.setHeader("Content-Type", mimeType);
-    // Set the Content-Length to the size of the file
     res.setHeader("Content-Length", stat.size);
 
     res.status(200);
@@ -147,6 +174,7 @@ const getVideoAsset = async (req, res, handleErr) => {
 const controller = {
   getVideos,
   uploadVideo,
+  extractAudio,
   getVideoAsset,
 };
 
