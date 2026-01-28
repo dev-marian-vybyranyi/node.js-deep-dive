@@ -1,0 +1,59 @@
+const { parentPort, workerData } = require("worker_threads");
+const generatePrimes = require("./prime-generator");
+const factorial = require("./factorial");
+
+const primes = new BigUint64Array(workerData.primes);
+const primesSeal = new Int32Array(workerData.primesSeal);
+const numbers = new BigUint64Array(workerData.numbers);
+const numbersSeal = new Int32Array(workerData.numbersSeal);
+
+function lock(seal) {
+  while (Atomics.compareExchange(seal, 0, 0, 1) !== 0) {
+    Atomics.wait(seal, 0, 1);
+  }
+}
+
+function unlock(seal) {
+  Atomics.store(seal, 0, 0);
+  Atomics.notify(seal, 0, 20);
+}
+
+const generateNumbers = (count, start) => {
+  const numbers = [];
+  for (let i = 0n; i < count; i++) {
+    numbers.push(start + i);
+  }
+  return numbers;
+};
+
+parentPort.on("message", ({ taskName, options }) => {
+  switch (taskName) {
+    case "generatePrimes":
+      const generatedPrimes = generatePrimes(options.count, options.start, {
+        format: options.format,
+        log: options.log,
+      });
+
+      lock(primesSeal);
+      primes.set(generatedPrimes, primes.indexOf(0n));
+      unlock(primesSeal);
+
+      parentPort.postMessage("done");
+      break;
+    case "factorial":
+      const result = factorial(options.n);
+      parentPort.postMessage(result);
+      break;
+    case "generateNumbers":
+      const generatedNumbers = generateNumbers(options.count, options.start);
+
+      lock(numbersSeal);
+      numbers.set(generatedNumbers, numbers.indexOf(0n));
+      unlock(numbersSeal);
+
+      parentPort.postMessage("done");
+      break;
+    default:
+      parentPort.postMessage("Unknown task");
+  }
+});
