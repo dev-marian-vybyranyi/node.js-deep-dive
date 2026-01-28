@@ -2,7 +2,7 @@ const cluster = require("node:cluster");
 
 if (cluster.isPrimary) {
   const coreCount = require("node:os").availableParallelism();
-  for (let i = 0; i < coreCount; i++) {
+  for (let i = 0; i < 2; i++) {
     cluster.fork();
   }
 

@@ -1,13 +1,8 @@
 const User = require("./controllers/user");
 const { Worker } = require("worker_threads");
 const { performance } = require("perf_hooks");
-const generatePrimes = require("../lib/prime-generator");
 
 module.exports = (server) => {
-  server.route("get", "/api/get-json-data", (req, res) => {
-    res.json({ data: "This is a big size json data".repeat(100) });
-  });
-
   server.route("post", "/api/login", User.logUserIn);
 
   server.route("delete", "/api/logout", User.logUserOut);
