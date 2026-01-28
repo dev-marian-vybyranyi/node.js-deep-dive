@@ -1,4 +1,5 @@
 const { Worker } = require("worker_threads");
+const path = require("path");
 
 class Pool {
   constructor(threadCount) {
@@ -12,7 +13,7 @@ class Pool {
   }
 
   spawnThread() {
-    const worker = new Worker("./calc.js");
+    const worker = new Worker(path.join(__dirname, "calc.js"));
 
     worker.on("message", (result) => {
       const { callback } = worker.currentTask;
