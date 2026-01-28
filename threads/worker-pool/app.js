@@ -1,7 +1,7 @@
 const Pool = require("./pool");
 const { performance } = require("perf_hooks");
 
-const numWorkers = 4;
+const numWorkers = 1;
 const pool = new Pool(numWorkers);
 
 let result = [];
@@ -20,6 +20,8 @@ for (let i = 0; i < totalTasks; i++) {
     },
     (primes) => {
       // console.log("Primes generated.");
+
+      console.log(performance.eventLoopUtilization());
 
       tasksDone++;
 
