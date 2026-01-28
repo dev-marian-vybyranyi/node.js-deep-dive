@@ -1,9 +1,19 @@
-const { Worker } = require("worker_threads");
-const fs = require("fs");
+const { Worker, workerData, parentPort } = require("worker_threads");
 
-setTimeout(() => {
-  fs.writeFile("./text.txt", "This is some text for testing...", (err) => {
-    if (err) return console.log(err);
-    console.log("File created successfully!");
-  });
-}, 3000);
+/*
+const port = workerData.port;
+
+port.postMessage("some text for testing");
+
+port.on("message", (msg) => {
+  console.log("Worker received: ", msg);
+});
+*/
+
+const port = parentPort;
+
+port.postMessage("some text for testing");
+
+port.on("message", (msg) => {
+  console.log("Worker received: ", msg);
+});
